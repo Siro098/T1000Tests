@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Needle Engine – GLB Test</title>
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@needle-tools/engine/dist/needle-engine.min.js"></script>
+  <style>
+    body { margin: 0; }
+    .ui { position: fixed; top: 12px; left: 12px; display: flex; gap: 8px; z-index: 10; }
+    .ui button { padding: 8px 12px; border: 0; border-radius: 8px; cursor: pointer; }
+    needle-engine { width: 100vw; height: 100vh; display: block; }
+  </style>
+</head>
+<body>
+  <div class="ui">
+    <button data-model="s1">S1</button>
+    <button data-model="s2">S2</button>
+    <button data-model="s3">S3</button>
+    <button id="ar">AR</button>
+    <button id="vr">VR</button>
+  </div>
+
+  <!-- Needle lädt direkt eine GLB/GLTF über src -->
+  <needle-engine id="app"
+                 background-color="0 0 0 1"
+                 xr-mode="auto"
+                 camera-controls
+                 environment-intensity="1.0"
+                 src="">
+  </needle-engine>
+
+  <script type="module">
+    const MODELS = {
+      s1: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF-Binary/Duck.glb",
+      s2: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb",
+      s3: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Sponza/glTF/Sponza.gltf"
+    };
+
+    const app = document.getElementById("app");
+    function load(key){ app.setAttribute("src", MODELS[key]); }
+    document.querySelectorAll('.ui button[data-model]').forEach(b => b.addEventListener('click', e => load(e.target.dataset.model)));
+    // XR Buttons (Needle stellt WebXR bereit)
+    document.getElementById("ar").addEventListener("click", () => app.dispatchEvent(new CustomEvent("needle-engine", { detail: { action: "start-ar" } })));
+    document.getElementById("vr").addEventListener("click", () => app.dispatchEvent(new CustomEvent("needle-engine", { detail: { action: "start-vr" } })));
+    load("s1");
+  </script>
+</body>
+</html>

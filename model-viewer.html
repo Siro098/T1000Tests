@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; }
+    .bar { position: fixed; top: 12px; left: 12px; display: flex; gap: 8px; z-index: 2; }
+    .bar button { padding: 8px 12px; border-radius: 8px; border: 0; cursor: pointer; }
+    model-viewer { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <button data-model="s1">S1</button>
+    <button data-model="s2">S2</button>
+    <button data-model="s3">S3</button>
+  </div>
+
+  <model-viewer id="mv"
+    src=""
+    camera-controls
+    exposure="1"
+    ar
+    ar-modes="webxr scene-viewer quick-look"
+    ar-scale="fixed"
+    disable-zoom
+    shadow-intensity="0.5"
+    autoplay
+    environment-image="neutral">
+  </model-viewer>
+
+  <script>
+    const MODELS = {
+      s1: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF-Binary/Duck.glb",
+      s2: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb",
+      s3: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Sponza/glTF/Sponza.gltf"
+    };
+    const mv = document.getElementById("mv");
+    function load(key){
+      mv.src = MODELS[key];
+      // Hinweis: Für iOS/visionOS erzeugt <model-viewer> automatisch USDZ, wenn kein ios-src angegeben ist.
+    }
+    document.querySelectorAll('.bar button').forEach(b => b.addEventListener('click', e => load(e.target.dataset.model)));
+    load("s1");
+  </script>
+</body>
+</html>

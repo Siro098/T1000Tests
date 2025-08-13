@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <!-- A-Frame + AR.js -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
+  <style>
+    .ui { position: fixed; top: 12px; left: 12px; display: flex; gap: 8px; z-index: 5; }
+    .ui button { padding: 8px 12px; border-radius: 8px; border: 0; cursor: pointer; }
+  </style>
+</head>
+<body style="margin:0; overflow:hidden;">
+  <div class="ui">
+    <button data-model="s1">S1</button>
+    <button data-model="s2">S2</button>
+    <button data-model="s3">S3</button>
+  </div>
+
+  <a-scene
+    renderer="antialias:true;colorManagement:true;physicallyCorrectLights:true"
+    embedded
+    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;">
+    
+    <!-- Marker: Hiro -->
+    <a-marker preset="hiro">
+      <!-- Platzhalter-Entity; wir setzen das GLB per JS -->
+      <a-entity id="model"
+                position="0 0 0"
+                rotation="0 0 0"
+                scale="0.01 0.01 0.01">
+      </a-entity>
+      <!-- dezentes Licht -->
+      <a-entity light="type:ambient; intensity:0.7"></a-entity>
+      <a-entity light="type:directional; intensity:0.8" position="1 2 1"></a-entity>
+    </a-marker>
+
+    <a-entity camera></a-entity>
+  </a-scene>
+
+  <script>
+    const MODELS = {
+      s1: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF-Binary/Duck.glb",
+      s2: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb",
+      // Für Sponza: sehr groß – bitte Geduld / starke Geräte nutzen
+      s3: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Sponza/glTF/Sponza.gltf"
+    };
+
+    const entity = document.getElementById("model");
+    function load(key){
+      const url = MODELS[key];
+      // A-Frame glTF-Komponente
+      entity.setAttribute("gltf-model", `url(${url})`);
+      // Auto-Scaling pro Modell (Faustwerte)
+      if(key === "s1") entity.setAttribute("scale", "0.4 0.4 0.4");
+      if(key === "s2") entity.setAttribute("scale", "1 1 1");
+      if(key === "s3") entity.setAttribute("scale", "0.003 0.003 0.003");
+    }
+    document.querySelectorAll('.ui button').forEach(b => b.addEventListener('click', e => load(e.target.dataset.model)));
+    load("s1");
+  </script>
+</body>
+</html>
