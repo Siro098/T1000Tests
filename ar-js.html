@@ -37,7 +37,7 @@
   <a-scene
     embedded
     renderer="alpha: true; antialias: true; logarithmicDepthBuffer: true"
-    arjs="sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false"
+    arjs="sourceType: webcam; facingMode: environment; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false; sourceWidth: 1280; sourceHeight: 720; displayWidth: 1280; displayHeight: 720"
   >
     <!-- Preload assets (optional; remote CORS must be allowed). -->
     <a-assets timeout="30000" crossorigin="anonymous">
@@ -55,7 +55,7 @@
     </a-marker>
 
     <!-- Kamera -->
-    <a-entity camera></a-entity>
+    <a-entity camera="fov: 70"></a-entity>
   </a-scene>
 
   <script>
