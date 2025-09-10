@@ -3,21 +3,21 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>AR.js Hiro – Simple Marker Tracking (sichtbarer Kamerafeed)</title>
+  <title>AR.js Hiro – Kamera bildschirmfüllend (cover)</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
   <style>
     html, body { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; }
-    /* HUD oberhalb von Canvas */
+
+    /* HUD nur zur Modellauswahl, kann entfernt werden */
     .hud {
       position: fixed; left: 0; right: 0; top: 0;
       display: flex; gap: 8px; align-items: center; padding: 10px;
       background: rgba(0,0,0,0.35); color: #fff; font: 14px system-ui; z-index: 20;
     }
-    .hud select, .hud button, .hud label { padding: 6px 10px; border: 0; border-radius: 8px; }
+    .hud select, .hud button { padding: 6px 10px; border: 0; border-radius: 8px; }
     .hud select { background: #111; color: #fff; }
     .hud button { background: #fff; color: #111; cursor: pointer; }
-    .hud label { background: #111; color: #fff; cursor: pointer; }
 
     .hint {
       position: fixed; left: 0; right: 0; bottom: 0;
@@ -25,19 +25,29 @@
       background: rgba(0,0,0,0.35); color: #fff; font: 12px system-ui; z-index: 20;
     }
 
-    /* Wichtig: Video hinter Canvas, beide füllen den Viewport */
-    #arjs-video, video[playsinline] {
-      position: fixed; inset: 0;
-      width: 100vw !important; height: 100vh !important;
-      object-fit: contain !important; /* Standard = alles sichtbar */
+    /* WICHTIG: Video und Canvas füllen den gesamten Bildschirm. 'cover' = randlos, evtl. Beschnitt */
+    #arjs-video,
+    video[playsinline],
+    video {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      object-fit: cover !important;     /* <<< erzwingt bildschirmfüllend */
+      object-position: center center !important;
       background: #000 !important;
-      z-index: 0;
+      z-index: 0 !important;
     }
+
     canvas.a-canvas {
-      position: fixed; inset: 0;
-      width: 100vw !important; height: 100vh !important;
-      display: block; background: transparent !important;
-      z-index: 10;
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      display: block !important;
+      background: transparent !important;
+      z-index: 10 !important;
+      pointer-events: none; /* HUD klickbar halten */
     }
   </style>
 </head>
@@ -51,18 +61,17 @@
       <option value="p1">Platzhalter 1</option>
     </select>
     <button id="resetBtn">Neu zentrieren</button>
-    <label><input type="checkbox" id="fitToggle" /> Video: cover</label>
   </div>
 
   <div class="hint">
-    Richte die Kamera auf den <strong>Hiro-Marker</strong>. Seite per HTTPS ausliefern.
+    Richte die Kamera auf den <strong>Hiro-Marker</strong>. Seite per HTTPS ausliefern. Video ist auf <strong>cover</strong> gesetzt (bildschirmfüllend, kann beschneiden).
   </div>
 
   <a-scene
     embedded
     vr-mode-ui="enabled: false"
     renderer="alpha: true; antialias: true; logarithmicDepthBuffer: true"
-    arjs="sourceType: webcam; facingMode: environment; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false; sourceWidth:1920; sourceHeight:1080; displayWidth:1920; displayHeight:1080"
+    arjs="sourceType: webcam; facingMode: environment; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false; sourceWidth:1280; sourceHeight:720; displayWidth:1280; displayHeight:720"
   >
     <a-assets timeout="30000" crossorigin="anonymous">
       <a-asset-item id="s1" src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF-Binary/Duck.glb"></a-asset-item>
@@ -75,11 +84,12 @@
       <a-entity id="modelContainer"></a-entity>
     </a-marker>
 
-    <!-- Kamera (FOV leicht enger, damit Modelle nicht winzig wirken) -->
+    <!-- Kamera -->
     <a-entity camera="fov: 80"></a-entity>
   </a-scene>
 
   <script>
+    // Modelle
     const MODEL_CONFIGS = {
       s1: { src: '#s1', pos: '0 0 0', rot: '270 0 0', scale: '0.5 0.5 0.5' },
       s2: { src: '#s2', pos: '0 0 0', rot: '270 0 0', scale: '1 1 1' },
@@ -89,7 +99,6 @@
 
     const modelSelect = document.getElementById('modelSelect');
     const resetBtn = document.getElementById('resetBtn');
-    const fitToggle = document.getElementById('fitToggle');
     const container = document.getElementById('modelContainer');
 
     function loadModel(key) {
@@ -116,16 +125,23 @@
       model.setAttribute('scale', cfg.scale);
     }
 
-    function applyVideoStyles(mode = 'contain') {
+    modelSelect.addEventListener('change', () => loadModel(modelSelect.value));
+    resetBtn.addEventListener('click', resetModel);
+    loadModel('s1');
+
+    // Erzwingt jederzeit "cover" und Vollbild für Video + Canvas
+    function forceFullCover() {
       const v = document.querySelector('#arjs-video') || document.querySelector('video');
       const c = document.querySelector('canvas.a-canvas');
+
       if (v) {
         v.setAttribute('playsinline', '');
         v.style.position = 'fixed';
         v.style.inset = '0';
         v.style.width = '100vw';
         v.style.height = '100vh';
-        v.style.objectFit = mode; // 'contain' oder 'cover'
+        v.style.objectFit = 'cover';
+        v.style.objectPosition = 'center center';
         v.style.background = '#000';
         v.style.zIndex = '0';
       }
@@ -140,24 +156,13 @@
       }
     }
 
-    modelSelect.addEventListener('change', () => loadModel(modelSelect.value));
-    resetBtn.addEventListener('click', resetModel);
-    fitToggle.addEventListener('change', () => {
-      applyVideoStyles(fitToggle.checked ? 'cover' : 'contain');
-    });
-
-    // Initial laden
-    loadModel('s1');
-
-    // Sicherstellen, dass das Video sichtbar und richtig skaliert ist
-    function syncSizing() {
-      applyVideoStyles(fitToggle.checked ? 'cover' : 'contain');
-    }
-    window.addEventListener('resize', syncSizing);
-    window.addEventListener('orientationchange', syncSizing);
-    document.addEventListener('DOMContentLoaded', syncSizing);
-    document.addEventListener('arjs-video-loaded', syncSizing);
-    setTimeout(syncSizing, 800);
+    // Mehrfach binden, da AR.js Styles nachladen kann
+    window.addEventListener('resize', forceFullCover);
+    window.addEventListener('orientationchange', forceFullCover);
+    document.addEventListener('DOMContentLoaded', forceFullCover);
+    document.addEventListener('arjs-video-loaded', forceFullCover);
+    setTimeout(forceFullCover, 300);
+    setTimeout(forceFullCover, 1000);
   </script>
 </body>
 </html>
