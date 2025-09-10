@@ -3,120 +3,80 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>AR.js Hiro – Simple Marker Tracking (3 Modelle + Platzhalter)</title>
-  <!-- A-Frame + AR.js (Marker-based). Use HTTPS when hosting on a phone. -->
+  <title>AR.js Hiro – Simple Marker Tracking (Zoom Fix)</title>
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
   <style>
     html, body { margin: 0; height: 100%; }
-    .hud { position: fixed; left: 0; right: 0; top: 0; display: flex; gap: 8px; align-items: center; padding: 10px; background: rgba(0,0,0,0.35); color: #fff; font: 14px system-ui, -apple-system, Segoe UI, Roboto; z-index: 10; }
+    .hud { position: fixed; left: 0; right: 0; top: 0; display: flex; gap: 8px; align-items: center; padding: 10px; background: rgba(0,0,0,0.35); color: #fff; font: 14px system-ui; z-index: 10; }
     .hud select, .hud button { padding: 6px 10px; border: 0; border-radius: 8px; }
     .hud select { background: #111; color: #fff; }
     .hud button { background: #fff; color: #111; cursor: pointer; }
-    .hint { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px; text-align: center; background: rgba(0,0,0,0.35); color: #fff; font: 12px system-ui, -apple-system, Segoe UI, Roboto; z-index: 10; }
-    .link { text-decoration: underline; }
+    .hint { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px; text-align: center; background: rgba(0,0,0,0.35); color: #fff; font: 12px system-ui; z-index: 10; }
+    #arjs-video, video[playsinline] { width: 100vw !important; height: 100vh !important; object-fit: contain !important; }
+    canvas.a-canvas { width: 100vw !important; height: 100vh !important; }
+    #arjs-video, video[playsinline] { width: 100vw !important; height: 100vh !important; object-fit: contain !important; }
+  canvas.a-canvas { width: 100vw !important; height: 100vh !important; }
   </style>
 </head>
 <body>
-  <!-- Simple UI to pick a model -->
   <div class="hud">
     <span>Modell:</span>
-    <select id="modelSelect" title="Modell wählen">
+    <select id="modelSelect">
       <option value="s1">s1 – Duck.glb</option>
       <option value="s2">s2 – DamagedHelmet.glb</option>
       <option value="s3">s3 – Sponza.gltf</option>
-      <option value="p1">Platzhalter 1 (eigene URL)</option>
+      <option value="p1">Platzhalter 1</option>
     </select>
-    <button id="resetBtn" title="Neu zentrieren">Neu zentrieren</button>
+    <button id="resetBtn">Neu zentrieren</button>
   </div>
   <div class="hint">
-    Richte die Kamera auf den <strong>Hiro‑Marker</strong>. Verwende HTTPS. iOS/Safari: auf Kamera‑Zugriff achten. | URL‑Parameter: <span class="link">?m=s2</span>
+    Richte die Kamera auf den <strong>Hiro‑Marker</strong>. Verwende HTTPS.
   </div>
 
-  <!-- Scene -->
   <a-scene
     embedded
     renderer="alpha: true; antialias: true; logarithmicDepthBuffer: true"
-    arjs="sourceType: webcam; facingMode: environment; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false; sourceWidth: 1280; sourceHeight: 720; displayWidth: 1280; displayHeight: 720"
+    arjs="sourceType: webcam; facingMode: environment; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false; sourceWidth:1920; sourceHeight:1080; displayWidth:1920; displayHeight:1080"
   >
-    <!-- Preload assets (optional; remote CORS must be allowed). -->
     <a-assets timeout="30000" crossorigin="anonymous">
       <a-asset-item id="s1" src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF-Binary/Duck.glb"></a-asset-item>
       <a-asset-item id="s2" src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"></a-asset-item>
       <a-asset-item id="s3" src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Sponza/glTF/Sponza.gltf"></a-asset-item>
-      <!-- Platzhalter 1: Trage hier deinen eigenen Link ein (GLB/GLTF/FBX via A-Frame plugin).
-           Beispiel: <a-asset-item id="p1" src="https://example.com/deinModell.glb"></a-asset-item> -->
     </a-assets>
 
-    <!-- Marker: preset hiro -->
     <a-marker type="pattern" preset="hiro" id="hiroMarker">
-      <!-- Container für das jeweils aktive Modell -->
       <a-entity id="modelContainer"></a-entity>
     </a-marker>
 
-    <!-- Kamera -->
-    <a-entity camera="fov: 70"></a-entity>
+    <a-entity camera="fov: 85"></a-entity>
   </a-scene>
 
   <script>
-    // Modell‑Konfigurationen: URL (falls nicht per <a-assets>), sowie passende Transform‑Defaults.
-    // Skalen sind absichtlich defensiv gewählt und je nach Objektgröße anzupassen.
     const MODEL_CONFIGS = {
-      s1: {
-        src: '#s1',
-        pos: '0 0 0',
-        rot: '270 0 0', // Duck liegt sonst oft auf der Seite
-        scale: '0.5 0.5 0.5'
-      },
-      s2: {
-        src: '#s2',
-        pos: '0 0 0',
-        rot: '270 0 0',
-        scale: '1 1 1'
-      },
-      s3: {
-        src: '#s3',
-        pos: '0 0 0',
-        rot: '270 0 0',
-        scale: '0.01 0.01 0.01' // Sponza ist sehr groß
-      },
-      // Platzhalter 1: Trage hier deinen Link ein (z. B. glb/gltf). Beispiel eingetragen für klare Sichtbarkeit.
-      p1: {
-        // Ersetze die nächste Zeile durch deinen eigenen Link oder verweise auf eine per <a-assets> definierte ID wie '#p1'.
-        src: 'https://example.com/DEIN-MODELL.glb', // <-- PLATZHALTER 1
-        pos: '0 0 0',
-        rot: '270 0 0',
-        scale: '0.2 0.2 0.2'
-      }
+      s1: { src: '#s1', pos: '0 0 0', rot: '270 0 0', scale: '0.5 0.5 0.5' },
+      s2: { src: '#s2', pos: '0 0 0', rot: '270 0 0', scale: '1 1 1' },
+      s3: { src: '#s3', pos: '0 0 0', rot: '270 0 0', scale: '0.01 0.01 0.01' },
+      p1: { src: 'https://example.com/DEIN-MODELL.glb', pos: '0 0 0', rot: '270 0 0', scale: '0.2 0.2 0.2' }
     };
 
     const modelSelect = document.getElementById('modelSelect');
     const resetBtn = document.getElementById('resetBtn');
     const container = document.getElementById('modelContainer');
 
-    // Modell aus URL‑Parameter wählen (z. B. ?m=s2)
-    const params = new URLSearchParams(location.search);
-    const initialKey = params.get('m') || 's1';
-
-    // Utility: aktives Modell wechseln
     function loadModel(key) {
       const cfg = MODEL_CONFIGS[key];
       if (!cfg) return;
-      // vorhandenes Kind entfernen
       while (container.firstChild) container.removeChild(container.firstChild);
-      // neues Entity anlegen
       const e = document.createElement('a-entity');
       e.setAttribute('gltf-model', cfg.src);
       e.setAttribute('position', cfg.pos);
       e.setAttribute('rotation', cfg.rot);
       e.setAttribute('scale', cfg.scale);
-      // Performance‑Tipp: KTX2/DRACO funktionieren hier nur, wenn das Asset so exportiert wurde
-      // und die passende drei.js‑Loader‑Pipeline aktiv ist.
       container.appendChild(e);
       modelSelect.value = key;
     }
 
-    // Neu zentrieren (setzt Transform wieder auf Defaults)
     function resetModel() {
       const key = modelSelect.value;
       const cfg = MODEL_CONFIGS[key];
@@ -131,8 +91,49 @@
     modelSelect.addEventListener('change', () => loadModel(modelSelect.value));
     resetBtn.addEventListener('click', resetModel);
 
-    // Erstes Modell laden
-    loadModel(initialKey);
+    loadModel('s1');
+
+    function tweakVideoSizing() {
+      const v = document.querySelector('#arjs-video') || document.querySelector('video');
+      if (v) {
+        v.setAttribute('playsinline', '');
+        v.style.objectFit = 'contain';
+        v.style.width = '100vw';
+        v.style.height = '100vh';
+      }
+      const c = document.querySelector('canvas.a-canvas');
+      if (c) {
+        c.style.width = '100vw';
+        c.style.height = '100vh';
+      }
+    }
+    window.addEventListener('resize', tweakVideoSizing);
+    window.addEventListener('orientationchange', tweakVideoSizing);
+    document.addEventListener('DOMContentLoaded', tweakVideoSizing);
+    document.addEventListener('arjs-video-loaded', tweakVideoSizing);
+    setTimeout(tweakVideoSizing, 800);
+  </script>
+  <script>
+    // Erzwinge "contain" für das AR.js-Video, um Cropping/Zoom-Eindruck zu vermeiden
+    function tweakVideoSizing() {
+      const v = document.querySelector('#arjs-video') || document.querySelector('video');
+      if (v) {
+        v.setAttribute('playsinline', '');
+        v.style.objectFit = 'contain';
+        v.style.width = '100vw';
+        v.style.height = '100vh';
+      }
+      const c = document.querySelector('canvas.a-canvas');
+      if (c) {
+        c.style.width = '100vw';
+        c.style.height = '100vh';
+      }
+    }
+    window.addEventListener('resize', tweakVideoSizing);
+    window.addEventListener('orientationchange', tweakVideoSizing);
+    document.addEventListener('DOMContentLoaded', tweakVideoSizing);
+    document.addEventListener('arjs-video-loaded', tweakVideoSizing);
+    setTimeout(tweakVideoSizing, 800);
   </script>
 </body>
 </html>
