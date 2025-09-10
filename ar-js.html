@@ -7,14 +7,14 @@
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
   <style>
-    html, body { margin: 0; height: 100%; }
+    html, body { margin: 0; padding: 0; height: 100%; background: #000; overflow: hidden; }
     .hud { position: fixed; left: 0; right: 0; top: 0; display: flex; gap: 8px; align-items: center; padding: 10px; background: rgba(0,0,0,0.35); color: #fff; font: 14px system-ui; z-index: 10; }
     .hud select, .hud button { padding: 6px 10px; border: 0; border-radius: 8px; }
     .hud select { background: #111; color: #fff; }
     .hud button { background: #fff; color: #111; cursor: pointer; }
     .hint { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px; text-align: center; background: rgba(0,0,0,0.35); color: #fff; font: 12px system-ui; z-index: 10; }
-    #arjs-video, video[playsinline] { width: 100vw !important; height: 100vh !important; object-fit: contain !important; }
-    canvas.a-canvas { width: 100vw !important; height: 100vh !important; }
+    #arjs-video, video[playsinline] { position: fixed; inset: 0; width: 100vw !important; height: 100vh !important; object-fit: contain !important; background: #000 !important; }
+    canvas.a-canvas { position: fixed; inset: 0; width: 100vw !important; height: 100vh !important; background: transparent !important; display: block; }
     #arjs-video, video[playsinline] { width: 100vw !important; height: 100vh !important; object-fit: contain !important; }
   canvas.a-canvas { width: 100vw !important; height: 100vh !important; }
   </style>
@@ -100,13 +100,26 @@
         v.style.objectFit = 'contain';
         v.style.width = '100vw';
         v.style.height = '100vh';
+        v.style.position = 'fixed';
+        v.style.inset = '0';
+        v.style.background = '#000';
       }
       const c = document.querySelector('canvas.a-canvas');
       if (c) {
         c.style.width = '100vw';
         c.style.height = '100vh';
+        c.style.position = 'fixed';
+        c.style.inset = '0';
+        c.style.background = 'transparent';
+        c.style.display = 'block';
       }
     }
+      const c = document.querySelector('canvas.a-canvas');
+      if (c) {
+        c.style.width = '100vw';
+        c.style.height = '100vh';
+      }
+    
     window.addEventListener('resize', tweakVideoSizing);
     window.addEventListener('orientationchange', tweakVideoSizing);
     document.addEventListener('DOMContentLoaded', tweakVideoSizing);
