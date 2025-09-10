@@ -7,8 +7,34 @@
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
   <style>
-    .ui { position: fixed; top: 12px; left: 12px; display: flex; gap: 8px; z-index: 5; }
-    .ui button { padding: 8px 12px; border-radius: 8px; border: 0; cursor: pointer; }
+    .ui {
+      position: fixed;
+      top: 12px;
+      left: 12px;
+      display: flex;
+      gap: 8px;
+      z-index: 5;
+    }
+    .ui button {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 0;
+      cursor: pointer;
+    }
+    /* AR.js Video-Element passend anzeigen */
+    #arjs-video {
+      position: fixed !important;
+      inset: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      object-fit: contain !important; /* kein Cropping */
+      z-index: 0 !important;
+      background: #000;
+    }
+    /* auch Canvas nicht beschneiden */
+    canvas.a-canvas {
+      object-fit: contain !important;
+    }
   </style>
 </head>
 <body style="margin:0; overflow:hidden;">
@@ -20,17 +46,20 @@
 
   <a-scene
     embedded
-    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;">
+    arjs="trackingMethod: best; sourceType: webcam;
+          sourceWidth: 1280; sourceHeight: 720;
+          displayWidth: 1280; displayHeight: 720;
+          debugUIEnabled: false;">
     
     <!-- Marker: Hiro -->
     <a-marker preset="hiro">
-      <!-- Platzhalter-Entity; wir setzen das GLB per JS -->
+      <!-- Platzhalter-Entity -->
       <a-entity id="model"
                 position="0 0 0"
                 rotation="0 0 0"
                 scale="0.01 0.01 0.01">
       </a-entity>
-      <!-- dezentes Licht -->
+      <!-- Licht -->
       <a-entity light="type:ambient; intensity:0.7"></a-entity>
       <a-entity light="type:directional; intensity:0.8" position="1 2 1"></a-entity>
     </a-marker>
@@ -48,15 +77,26 @@
     const entity = document.getElementById("model");
     function load(key){
       const url = MODELS[key];
-      // A-Frame glTF-Komponente
       entity.setAttribute("gltf-model", `url(${url})`);
-      // Auto-Scaling pro Modell (Faustwerte)
+      // Auto-Scaling pro Modell
       if(key === "s1") entity.setAttribute("scale", "0.4 0.4 0.4");
       if(key === "s2") entity.setAttribute("scale", "1 1 1");
       if(key === "s3") entity.setAttribute("scale", "0.003 0.003 0.003");
     }
-    document.querySelectorAll('.ui button').forEach(b => b.addEventListener('click', e => load(e.target.dataset.model)));
+    document.querySelectorAll('.ui button').forEach(b => 
+      b.addEventListener('click', e => load(e.target.dataset.model))
+    );
     load("s1");
+
+    // sicherstellen, dass object-fit nach dem Start gesetzt bleibt
+    window.addEventListener('load', () => {
+      const fix = () => {
+        const v = document.getElementById('arjs-video');
+        if (v) v.style.objectFit = 'contain';
+      };
+      fix();
+      setTimeout(fix, 500);
+    });
   </script>
 </body>
 </html>
