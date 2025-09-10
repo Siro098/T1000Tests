@@ -1,102 +1,332 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- A-Frame + AR.js -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AR.js Bewertungsmatrix Tester + Modellauswahl</title>
+
+  <!-- A-Frame & AR.js -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar-nft.js"></script>
+
   <style>
-    .ui {
-      position: fixed;
-      top: 12px;
-      left: 12px;
-      display: flex;
-      gap: 8px;
-      z-index: 5;
-    }
-    .ui button {
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: 0;
-      cursor: pointer;
-    }
-    /* AR.js Video-Element passend anzeigen */
-    #arjs-video {
-      position: fixed !important;
-      inset: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      object-fit: contain !important; /* kein Cropping */
-      z-index: 0 !important;
-      background: #000;
-    }
-    /* auch Canvas nicht beschneiden */
-    canvas.a-canvas {
-      object-fit: contain !important;
-    }
+    html,body{margin:0;background:#000;color:#eee;font-family:system-ui,Arial}
+    #ui{position:fixed;top:0;left:0;right:0;z-index:9999;
+        background:rgba(16,16,16,.9);padding:8px 10px;display:grid;
+        grid-template-columns:1fr auto;gap:10px;align-items:center}
+    #tabs{display:flex;gap:6px;flex-wrap:wrap}
+    .tab-btn{padding:6px 10px;border:1px solid #444;background:#1e1e1e;cursor:pointer;border-radius:6px}
+    .tab-btn.active{background:#2e2e2e;border-color:#888}
+    #panel{position:fixed;bottom:0;left:0;right:0;z-index:9999;
+           display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;
+           background:rgba(16,16,16,.92);padding:10px}
+    .box{border:1px solid #333;border-radius:8px;padding:10px;background:#141414}
+    h3{margin:0 0 6px 0;font-size:14px}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{border-bottom:1px solid #2a2a2a;padding:4px;text-align:left}
+    .score{display:flex;gap:4px}
+    .score button{padding:4px 8px;border:1px solid #444;background:#222;color:#eee;cursor:pointer;border-radius:6px}
+    .score button.active{background:#0a5;border-color:#0a5}
+    .pill{padding:2px 6px;border-radius:999px;border:1px solid #444;font-size:12px}
+    .ok{color:#0a5;border-color:#0a5}.warn{color:#fa0;border-color:#fa0}.bad{color:#e33;border-color:#e33}
+    #total{font-size:18px}
+    #scene-wrap{position:fixed;top:92px;bottom:260px;left:0;right:0}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .btn{padding:6px 10px;border:1px solid #444;background:#1e1e1e;color:#eee;border-radius:6px;cursor:pointer}
+    select, label{font-size:13px}
   </style>
 </head>
-<body style="margin:0; overflow:hidden;">
-  <div class="ui">
-    <button data-model="s1">S1</button>
-    <button data-model="s2">S2</button>
-    <button data-model="s3">S3</button>
-  </div>
+<body>
 
-  <a-scene
-    embedded
-    arjs="trackingMethod: best; sourceType: webcam;
-          sourceWidth: 1280; sourceHeight: 720;
-          displayWidth: 1280; displayHeight: 720;
-          debugUIEnabled: false;">
-    
-    <!-- Marker: Hiro -->
-    <a-marker preset="hiro">
-      <!-- Platzhalter-Entity -->
-      <a-entity id="model"
-                position="0 0 0"
-                rotation="0 0 0"
-                scale="0.01 0.01 0.01">
-      </a-entity>
-      <!-- Licht -->
-      <a-entity light="type:ambient; intensity:0.7"></a-entity>
-      <a-entity light="type:directional; intensity:0.8" position="1 2 1"></a-entity>
+<!-- Kopfzeile mit Tabs + Modellauswahl -->
+<div id="ui">
+  <div>
+    <div id="tabs">
+      <button class="tab-btn active" data-scene="marker">Markertracking</button>
+      <button class="tab-btn" data-scene="gps">GPS based</button>
+      <button class="tab-btn" data-scene="image">Image Tracking</button>
+      <button class="tab-btn" data-scene="animation">Animation</button>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <!-- NEU: Modellauswahl + Sichtbarkeit -->
+      <label for="modelSelect">Modell:</label>
+      <select id="modelSelect">
+        <option value="duck">Duck</option>
+        <option value="helmet">DamagedHelmet</option>
+        <option value="sponza">Sponza (groß)</option>
+      </select>
+      <label class="row"><input type="checkbox" id="toggleModel" checked> Objekt einblenden</label>
+      <span id="info" style="font-size:12px;opacity:.9"></span>
+    </div>
+  </div>
+  <div class="row">
+    <button class="btn" id="export-json">Export JSON</button>
+    <button class="btn" id="export-csv">Export CSV</button>
+  </div>
+</div>
+
+<div id="scene-wrap">
+  <!-- Markertracking -->
+  <a-scene id="scene-marker" embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+    <a-assets>
+      <!-- NEU: drei Modellquellen -->
+      <a-asset-item id="mdl-duck"   src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF-Binary/Duck.glb"></a-asset-item>
+      <a-asset-item id="mdl-helmet" src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"></a-asset-item>
+      <a-asset-item id="mdl-sponza" src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Sponza/glTF/Sponza.gltf"></a-asset-item>
+    </a-assets>
+
+    <a-marker id="marker-hiro" type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/data/patt.hiro">
+      <!-- NEU: gemeinsamer Platzhalter für das ausgewählte Objekt -->
+      <a-entity id="markerModel" position="0 0 0"></a-entity>
     </a-marker>
 
+    <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/data/patt.kanji">
+      <a-box depth="0.5" height="0.5" width="0.5" position="0 0.25 0"></a-box>
+    </a-marker>
     <a-entity camera></a-entity>
   </a-scene>
 
-  <script>
-    const MODELS = {
-      s1: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF-Binary/Duck.glb",
-      s2: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb",
-      s3: "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Sponza/glTF/Sponza.gltf"
-    };
+  <!-- GPS -->
+  <a-scene id="scene-gps" embedded vr-mode-ui="enabled:false"
+           renderer="logarithmicDepthBuffer:true"
+           arjs="sourceType: webcam; trackingMethod: best; debugUIEnabled: false;">
+    <a-camera gps-camera rotation-reader></a-camera>
+    <a-entity id="gpsModel" gps-entity-place="latitude: 0; longitude: 0"></a-entity>
+  </a-scene>
 
-    const entity = document.getElementById("model");
-    function load(key){
-      const url = MODELS[key];
-      entity.setAttribute("gltf-model", `url(${url})`);
-      // Auto-Scaling pro Modell
-      if(key === "s1") entity.setAttribute("scale", "0.4 0.4 0.4");
-      if(key === "s2") entity.setAttribute("scale", "1 1 1");
-      if(key === "s3") entity.setAttribute("scale", "0.003 0.003 0.003");
-    }
-    document.querySelectorAll('.ui button').forEach(b => 
-      b.addEventListener('click', e => load(e.target.dataset.model))
-    );
-    load("s1");
+  <!-- Image (Platzhalter: Marker) -->
+  <a-scene id="scene-image" embedded vr-mode-ui="enabled:false"
+           renderer="logarithmicDepthBuffer:true"
+           arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled:false;">
+    <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/data/patt.hiro">
+      <a-entity id="imageModel"></a-entity>
+    </a-marker>
+    <a-entity camera></a-entity>
+  </a-scene>
 
-    // sicherstellen, dass object-fit nach dem Start gesetzt bleibt
-    window.addEventListener('load', () => {
-      const fix = () => {
-        const v = document.getElementById('arjs-video');
-        if (v) v.style.objectFit = 'contain';
-      };
-      fix();
-      setTimeout(fix, 500);
+  <!-- Animation -->
+  <a-scene id="scene-animation" embedded arjs="sourceType: webcam; debugUIEnabled:false;">
+    <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/data/patt.hiro">
+      <a-entity id="animModel"
+                animation__rot="property: rotation; to: 0 360 0; loop: true; dur: 4000; easing: linear"></a-entity>
+    </a-marker>
+    <a-entity camera></a-entity>
+  </a-scene>
+</div>
+
+<!-- Bewertungsmatrix (unverändert aus deiner Version, gekürzt auf das Wesentliche) -->
+<div id="panel">
+  <div class="box">
+    <h3>Kompatibilität (35%)</h3>
+    <table><tr><th>Gerät</th><th>Gewichtung</th><th>Punkte</th><th>Gewichtet</th></tr><tbody id="compat-tbody"></tbody></table>
+  </div>
+  <div class="box">
+    <h3>Funktionalität (40%)</h3>
+    <table><tr><th>Kriterium</th><th>Gewichtung</th><th>Punkte</th><th>Gewichtet</th></tr><tbody id="func-tbody"></tbody></table>
+  </div>
+  <div class="box">
+    <h3>Voraussetzungen (25%)</h3>
+    <table><tr><th>Kriterium</th><th>Gewichtung</th><th>Punkte</th><th>Gewichtet</th></tr><tbody id="req-tbody"></tbody></table>
+  </div>
+  <div class="box">
+    <h3>Ergebnis</h3>
+    <div id="total">Gesamt: 0.00</div>
+    <div class="row" style="margin-top:6px">
+      <span id="ua" class="pill"></span>
+      <span id="hitTest" class="pill"></span>
+      <span id="geo" class="pill"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ----------------- Modell-Auswahl Logik -----------------
+  const MODEL_SRC = {
+    duck:   '#mdl-duck',
+    helmet: '#mdl-helmet',
+    sponza: '#mdl-sponza'
+  };
+
+  // sinnvolle Standard-Skalierungen je Szene/Modell
+  const DEFAULT_SCALE = {
+    marker: { duck:'0.02 0.02 0.02', helmet:'0.2 0.2 0.2', sponza:'0.002 0.002 0.002' },
+    gps:    { duck:'2 2 2',          helmet:'2 2 2',       sponza:'0.05 0.05 0.05' },
+    image:  { duck:'0.03 0.03 0.03', helmet:'0.3 0.3 0.3', sponza:'0.002 0.002 0.002' },
+    anim:   { duck:'0.03 0.03 0.03', helmet:'0.3 0.3 0.3', sponza:'0.002 0.002 0.002' }
+  };
+
+  const $ = s => document.querySelector(s);
+  const $$ = s => document.querySelectorAll(s);
+
+  function applyModelToTargets(key){
+    const src = MODEL_SRC[key];
+    // Marker
+    const markerNode = $('#markerModel');
+    markerNode.setAttribute('gltf-model', src);
+    markerNode.setAttribute('scale', DEFAULT_SCALE.marker[key]);
+    // GPS
+    const gpsNode = $('#gpsModel');
+    gpsNode.setAttribute('gltf-model', src);
+    gpsNode.setAttribute('scale', DEFAULT_SCALE.gps[key]);
+    // Image
+    const imgNode = $('#imageModel');
+    imgNode.setAttribute('gltf-model', src);
+    imgNode.setAttribute('scale', DEFAULT_SCALE.image[key]);
+    // Animation
+    const animNode = $('#animModel');
+    animNode.setAttribute('gltf-model', src);
+    animNode.setAttribute('scale', DEFAULT_SCALE.anim[key]);
+  }
+
+  function setVisibility(visible){
+    const v = visible ? 'true' : 'false';
+    ['#markerModel','#gpsModel','#imageModel','#animModel'].forEach(id=>{
+      const n = $(id);
+      if (n) n.setAttribute('visible', v);
     });
-  </script>
+  }
+
+  // UI verdrahten
+  $('#modelSelect').addEventListener('change', e=>{
+    const key = e.target.value;
+    localStorage.setItem('arjs-model-key', key);
+    applyModelToTargets(key);
+  });
+  $('#toggleModel').addEventListener('change', e=>{
+    setVisibility(e.target.checked);
+    localStorage.setItem('arjs-model-visible', e.target.checked ? '1' : '0');
+  });
+
+  // Restore Auswahl
+  const savedKey = localStorage.getItem('arjs-model-key') || 'duck';
+  $('#modelSelect').value = savedKey;
+  applyModelToTargets(savedKey);
+  const savedVis = localStorage.getItem('arjs-model-visible') !== '0';
+  $('#toggleModel').checked = savedVis; setVisibility(savedVis);
+
+  // ----------------- Tabs / Szenenumschaltung -----------------
+  const tabInfo = {
+    marker:'Zeige Hiro/Kanji Marker. Objekt nach Wahl wird eingeblendet.',
+    gps:'Erlaube Standortzugriff. Modell erscheint an deiner Position.',
+    image:'Platzhalter (Marker) – kann gegen NFT ersetzt werden.',
+    animation:'Gleiches Modell, mit Rotation zur Animationsprüfung.'
+  };
+  document.getElementById('info').textContent = tabInfo.marker;
+  $$('a-scene').forEach(sc=>sc.style.display='none'); $('#scene-marker').style.display='block';
+  document.addEventListener('click', e=>{
+    if (!e.target.matches('.tab-btn')) return;
+    $$('.tab-btn').forEach(b=>b.classList.remove('active')); e.target.classList.add('active');
+    const target = e.target.dataset.scene;
+    $$('a-scene').forEach(sc=>sc.style.display='none');
+    $('#scene-'+target).style.display='block';
+    $('#info').textContent = tabInfo[target] || '';
+  });
+
+  // ----------------- Bewertungsmatrix (wie in deiner Version) -----------------
+  const matrix = {
+    compatibility:{weight:0.35,items:[
+      {key:'visionpro',name:'Vision Pro',weight:0.25},
+      {key:'quest3',name:'Meta Quest 3',weight:0.25},
+      {key:'android',name:'Android (Pixel9a Chrome)',weight:0.25},
+      {key:'iphone',name:'iPhone (13 mini Safari)',weight:0.25},
+    ]},
+    functionality:{weight:0.40,items:[
+      {key:'modeltracking',name:'Modelltracking',weight:0.30},
+      {key:'markertracking',name:'Markertracking',weight:0.20},
+      {key:'gps',name:'GPS based',weight:0.10},
+      {key:'imagetracking',name:'Imagetracking',weight:0.10},
+      {key:'plane',name:'Plane Detection',weight:0.20},
+      {key:'animation',name:'Animationen',weight:0.10},
+    ]},
+    requirements:{weight:0.25,items:[
+      {key:'effort',name:'Programmieraufwand',weight:0.50},
+      {key:'license',name:'Lizenzkosten',weight:0.50},
+    ]}
+  };
+  const state = JSON.parse(localStorage.getItem('arjs-matrix-state')||'{}');
+  const save = ()=>localStorage.setItem('arjs-matrix-state', JSON.stringify(state));
+
+  function mkRow(tbody,item,groupKey,groupWeight){
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${item.name}</td>
+      <td>${(item.weight*groupWeight*100).toFixed(0)}%</td>
+      <td data-key="${groupKey}-${item.key}">
+        <div class="score">${[0,1,2,3,4,5].map(n=>`<button data-score="${n}">${n}</button>`).join('')}</div>
+      </td>
+      <td class="weighted">0</td>`;
+    tbody.appendChild(tr);
+    const cellKey=`${groupKey}-${item.key}`;
+    const saved=state[cellKey];
+    if(typeof saved==='number'){
+      tr.querySelector(`button[data-score="${saved}"]`)?.classList.add('active');
+      tr.querySelector('.weighted').textContent=((saved/5)*item.weight*groupWeight*100).toFixed(2);
+    }
+  }
+  function buildTables(){
+    const ct=document.getElementById('compat-tbody'),
+          ft=document.getElementById('func-tbody'),
+          rt=document.getElementById('req-tbody');
+    ct.innerHTML=''; ft.innerHTML=''; rt.innerHTML='';
+    matrix.compatibility.items.forEach(i=>mkRow(ct,i,'compat',matrix.compatibility.weight));
+    matrix.functionality.items.forEach(i=>mkRow(ft,i,'func',matrix.functionality.weight));
+    matrix.requirements.items.forEach(i=>mkRow(rt,i,'req',matrix.requirements.weight));
+  }
+  function recalc(){
+    let total=0;
+    document.querySelectorAll('tbody tr').forEach(tr=>{
+      const btn=tr.querySelector('.score button.active');
+      const score=btn?Number(btn.dataset.score):0;
+      const label=tr.querySelector('td').textContent.trim();
+      for(const group of ['compat','func','req']){
+        const def=group==='compat'?matrix.compatibility:group==='func'?matrix.functionality:matrix.requirements;
+        const item=def.items.find(x=>x.name===label);
+        if(item){
+          const w=((score/5)*item.weight*def.weight*100);
+          tr.querySelector('.weighted').textContent=w.toFixed(2); total+=w; break;
+        }
+      }
+    });
+    document.getElementById('total').textContent='Gesamt: '+total.toFixed(2);
+  }
+  buildTables(); recalc();
+  document.addEventListener('click', e=>{
+    if(!e.target.matches('.score button')) return;
+    const cell=e.target.closest('td[data-key]');
+    cell.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    state[cell.getAttribute('data-key')]=Number(e.target.dataset.score);
+    save(); recalc();
+  });
+
+  // Geräteinfos/Capabilities
+  document.getElementById('ua').textContent=navigator.userAgent;
+  const hasXR=!!(navigator.xr && window.XRSession && 'requestSession' in navigator.xr);
+  const pillHit=document.getElementById('hitTest'); pillHit.textContent=hasXR?'WebXR verfügbar':'WebXR nicht verfügbar';
+  pillHit.className='pill '+(hasXR?'ok':'bad');
+  const pillGeo=document.getElementById('geo');
+  if('geolocation' in navigator){
+    pillGeo.textContent='Geolocation verfügbar'; pillGeo.className='pill ok';
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const lat=pos.coords.latitude.toFixed(6), lon=pos.coords.longitude.toFixed(6);
+      document.getElementById('gpsModel').setAttribute('gps-entity-place',`latitude: ${lat}; longitude: ${lon}`);
+    },()=>{ pillGeo.textContent='Geolocation blockiert'; pillGeo.className='pill warn';});
+  }else{ pillGeo.textContent='Geolocation nicht verfügbar'; pillGeo.className='pill bad'; }
+
+  // Exporte
+  document.getElementById('export-json').addEventListener('click', ()=>{
+    const blob=new Blob([JSON.stringify(JSON.parse(localStorage.getItem('arjs-matrix-state')||'{}'),null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='arjs-bewertung.json'; a.click();
+  });
+  document.getElementById('export-csv').addEventListener('click', ()=>{
+    const st=JSON.parse(localStorage.getItem('arjs-matrix-state')||'{}');
+    const rows=[['Gruppe','Kriterium','Punkte']]; Object.entries(st).forEach(([k,v])=>{
+      const [g,i]=k.split('-'); rows.push([g,i,v]);
+    });
+    const csv=rows.map(r=>r.join(';')).join('\n');
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='arjs-bewertung.csv'; a.click();
+  });
+</script>
 </body>
 </html>
