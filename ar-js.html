@@ -2,98 +2,137 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AR.js Model-Tester (minimal)</title>
-
-  <!-- A-Frame & AR.js -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>AR.js Hiro – Simple Marker Tracking (3 Modelle + Platzhalter)</title>
+  <!-- A-Frame + AR.js (Marker-based). Use HTTPS when hosting on a phone. -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.min.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
   <style>
-    html,body{margin:0;background:#000;color:#eee;font-family:system-ui,Arial}
-    #ui{
-      position:fixed; top:0; left:0; right:0; z-index:9999;
-      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
-      background:rgba(16,16,16,.9); padding:8px 10px; border-bottom:1px solid #333;
-    }
-    select,label{font-size:14px}
-    #scene-wrap{position:fixed; top:52px; bottom:0; left:0; right:0}
-    .btn{padding:6px 10px; border:1px solid #444; background:#1e1e1e; color:#eee; border-radius:6px; cursor:pointer}
-    a{color:#8fd}
+    html, body { margin: 0; height: 100%; }
+    .hud { position: fixed; left: 0; right: 0; top: 0; display: flex; gap: 8px; align-items: center; padding: 10px; background: rgba(0,0,0,0.35); color: #fff; font: 14px system-ui, -apple-system, Segoe UI, Roboto; z-index: 10; }
+    .hud select, .hud button { padding: 6px 10px; border: 0; border-radius: 8px; }
+    .hud select { background: #111; color: #fff; }
+    .hud button { background: #fff; color: #111; cursor: pointer; }
+    .hint { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px; text-align: center; background: rgba(0,0,0,0.35); color: #fff; font: 12px system-ui, -apple-system, Segoe UI, Roboto; z-index: 10; }
+    .link { text-decoration: underline; }
   </style>
 </head>
 <body>
+  <!-- Simple UI to pick a model -->
+  <div class="hud">
+    <span>Modell:</span>
+    <select id="modelSelect" title="Modell wählen">
+      <option value="s1">s1 – Duck.glb</option>
+      <option value="s2">s2 – DamagedHelmet.glb</option>
+      <option value="s3">s3 – Sponza.gltf</option>
+      <option value="p1">Platzhalter 1 (eigene URL)</option>
+    </select>
+    <button id="resetBtn" title="Neu zentrieren">Neu zentrieren</button>
+  </div>
+  <div class="hint">
+    Richte die Kamera auf den <strong>Hiro‑Marker</strong>. Verwende HTTPS. iOS/Safari: auf Kamera‑Zugriff achten. | URL‑Parameter: <span class="link">?m=s2</span>
+  </div>
 
-<!-- Mini-UI -->
-<div id="ui">
-  <label for="modelSelect">Modell:</label>
-  <select id="modelSelect">
-    <option value="duck">Duck</option>
-    <option value="helmet">DamagedHelmet</option>
-    <option value="sponza">Sponza (groß)</option>
-  </select>
-
-  <label><input type="checkbox" id="toggleModel" checked> Objekt einblenden</label>
-
-  <a class="btn" href="https://raw.githubusercontent.com/AR-js-org/AR.js/master/three.js/data/HIRO.jpg" target="_blank" rel="noreferrer">Hiro-Marker öffnen</a>
-</div>
-
-<!-- AR-Szene (Markertracking mit Hiro) -->
-<div id="scene-wrap">
-  <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
-    <a-assets>
-      <a-asset-item id="mdl-duck"   src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF-Binary/Duck.glb"></a-asset-item>
-      <a-asset-item id="mdl-helmet" src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"></a-asset-item>
-      <a-asset-item id="mdl-sponza" src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Sponza/glTF/Sponza.gltf"></a-asset-item>
+  <!-- Scene -->
+  <a-scene
+    embedded
+    renderer="alpha: true; antialias: true; logarithmicDepthBuffer: true"
+    arjs="sourceType: webcam; detectionMode: mono_and_matrix; matrixCodeType: 3x3; debugUIEnabled: false"
+  >
+    <!-- Preload assets (optional; remote CORS must be allowed). -->
+    <a-assets timeout="30000" crossorigin="anonymous">
+      <a-asset-item id="s1" src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF-Binary/Duck.glb"></a-asset-item>
+      <a-asset-item id="s2" src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb"></a-asset-item>
+      <a-asset-item id="s3" src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Sponza/glTF/Sponza.gltf"></a-asset-item>
+      <!-- Platzhalter 1: Trage hier deinen eigenen Link ein (GLB/GLTF/FBX via A-Frame plugin).
+           Beispiel: <a-asset-item id="p1" src="https://example.com/deinModell.glb"></a-asset-item> -->
     </a-assets>
 
-    <a-marker type="pattern" url="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/three.js/data/patt.hiro">
-      <!-- Platzhalter für das gewählte Modell -->
-      <a-entity id="modelNode" position="0 0 0"></a-entity>
+    <!-- Marker: preset hiro -->
+    <a-marker type="pattern" preset="hiro" id="hiroMarker">
+      <!-- Container für das jeweils aktive Modell -->
+      <a-entity id="modelContainer"></a-entity>
     </a-marker>
 
+    <!-- Kamera -->
     <a-entity camera></a-entity>
   </a-scene>
-</div>
 
-<script>
-  const MODEL_SRC = {
-    duck:   '#mdl-duck',
-    helmet: '#mdl-helmet',
-    sponza: '#mdl-sponza'
-  };
+  <script>
+    // Modell‑Konfigurationen: URL (falls nicht per <a-assets>), sowie passende Transform‑Defaults.
+    // Skalen sind absichtlich defensiv gewählt und je nach Objektgröße anzupassen.
+    const MODEL_CONFIGS = {
+      s1: {
+        src: '#s1',
+        pos: '0 0 0',
+        rot: '270 0 0', // Duck liegt sonst oft auf der Seite
+        scale: '0.5 0.5 0.5'
+      },
+      s2: {
+        src: '#s2',
+        pos: '0 0 0',
+        rot: '270 0 0',
+        scale: '1 1 1'
+      },
+      s3: {
+        src: '#s3',
+        pos: '0 0 0',
+        rot: '270 0 0',
+        scale: '0.01 0.01 0.01' // Sponza ist sehr groß
+      },
+      // Platzhalter 1: Trage hier deinen Link ein (z. B. glb/gltf). Beispiel eingetragen für klare Sichtbarkeit.
+      p1: {
+        // Ersetze die nächste Zeile durch deinen eigenen Link oder verweise auf eine per <a-assets> definierte ID wie '#p1'.
+        src: 'https://example.com/DEIN-MODELL.glb', // <-- PLATZHALTER 1
+        pos: '0 0 0',
+        rot: '270 0 0',
+        scale: '0.2 0.2 0.2'
+      }
+    };
 
-  // kompakte Standard-Skalierung für Markergröße
-  const SCALE = {
-    duck:   '0.02 0.02 0.02',
-    helmet: '0.2 0.2 0.2',
-    sponza: '0.002 0.002 0.002'
-  };
+    const modelSelect = document.getElementById('modelSelect');
+    const resetBtn = document.getElementById('resetBtn');
+    const container = document.getElementById('modelContainer');
 
-  const $ = s => document.querySelector(s);
-  const modelNode = $('#modelNode');
-  const select = $('#modelSelect');
-  const toggle = $('#toggleModel');
+    // Modell aus URL‑Parameter wählen (z. B. ?m=s2)
+    const params = new URLSearchParams(location.search);
+    const initialKey = params.get('m') || 's1';
 
-  function applyModel(key){
-    modelNode.setAttribute('gltf-model', MODEL_SRC[key]);
-    modelNode.setAttribute('scale', SCALE[key]);
-    localStorage.setItem('arjs-model-key', key);
-  }
-  function setVisibility(on){
-    modelNode.setAttribute('visible', on ? 'true' : 'false');
-    localStorage.setItem('arjs-model-visible', on ? '1' : '0');
-  }
+    // Utility: aktives Modell wechseln
+    function loadModel(key) {
+      const cfg = MODEL_CONFIGS[key];
+      if (!cfg) return;
+      // vorhandenes Kind entfernen
+      while (container.firstChild) container.removeChild(container.firstChild);
+      // neues Entity anlegen
+      const e = document.createElement('a-entity');
+      e.setAttribute('gltf-model', cfg.src);
+      e.setAttribute('position', cfg.pos);
+      e.setAttribute('rotation', cfg.rot);
+      e.setAttribute('scale', cfg.scale);
+      // Performance‑Tipp: KTX2/DRACO funktionieren hier nur, wenn das Asset so exportiert wurde
+      // und die passende drei.js‑Loader‑Pipeline aktiv ist.
+      container.appendChild(e);
+      modelSelect.value = key;
+    }
 
-  // Events
-  select.addEventListener('change', e => applyModel(e.target.value));
-  toggle.addEventListener('change', e => setVisibility(e.target.checked));
+    // Neu zentrieren (setzt Transform wieder auf Defaults)
+    function resetModel() {
+      const key = modelSelect.value;
+      const cfg = MODEL_CONFIGS[key];
+      if (!cfg) return;
+      const model = container.firstChild;
+      if (!model) return;
+      model.setAttribute('position', cfg.pos);
+      model.setAttribute('rotation', cfg.rot);
+      model.setAttribute('scale', cfg.scale);
+    }
 
-  // Restore letzte Auswahl
-  const savedKey = localStorage.getItem('arjs-model-key') || 'duck';
-  const savedVis = localStorage.getItem('arjs-model-visible') !== '0';
-  select.value = savedKey; toggle.checked = savedVis;
-  applyModel(savedKey); setVisibility(savedVis);
-</script>
+    modelSelect.addEventListener('change', () => loadModel(modelSelect.value));
+    resetBtn.addEventListener('click', resetModel);
+
+    // Erstes Modell laden
+    loadModel(initialKey);
+  </script>
 </body>
 </html>
